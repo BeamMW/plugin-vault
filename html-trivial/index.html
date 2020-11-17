@@ -1,0 +1,326 @@
+<body></body>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>BEAM Applications</title>
+        <link href="styles.css" rel="stylesheet">
+        <!-- link rel="stylesheet" href="fonts.css" media="print" onload="this.media='all'" -->
+    </head>
+    <body>
+        <div class="center">
+            <div id="title">BEAM Vault</div><br>
+            <div id="status">Connecting...</div>
+            <div id="error"></div><br>
+            <div class="center gray" id="cid"></div><br>
+            <div id="vault" class="center">
+                <br>
+                <div class="green">In Vault: <span id="balance"></span> BEAM</div><br>
+                <div>
+                    <a href='' id="deposit">Deposit 5 BEAM</a>&nbsp;&nbsp;&nbsp;
+                    <a href='' id="withdraw">Withdraw All</a>
+                </div>
+                <br>
+            </div>
+        </div>
+
+        <!--
+        <div class="center invisible" id="game">
+            <div class="gray">
+                Envelope deposit address:
+                <div id="eaddr"></div>
+            </div>
+
+            <div class="red invisible" id="not-running">
+                <br>
+                Envelope is not running NOW
+                <br>
+                Send BEAM to launch!
+            </div>
+            
+            <div>
+                <br>
+                <a href='' id="make-stake">Send 5 BEAM to the envelope</a>
+            </div>
+
+            <div>
+                <br>
+                <div>In Envelope:       <span id="total"></span> BEAM</div>
+                <div>Incoming:          <span id="incoming-all"></span> BEAM</div>
+            </div>
+
+            <div class="invisible" id="taken">
+                <br>
+                Congratulations! You took <span id="taken-amount"></span> from the envelope!<br>
+                Wait until the next deposit to take again
+            </div>
+
+            <div id="take">
+                <br>
+                <a href='' id="make-stake">TAKE!</a>
+            </div>
+
+            <div class="green">
+                <br>
+                <div>Your paid reward:  <span id="reward-paid"></span> BEAM</div>
+                <div>Your outgoing reward:  <span id="reward-out"></span> BEAM</div>
+                <div>Your available reward:  <span id="reward-avail"></span> BEAM</div>
+                <div id="withdraw" class="invisible">
+                    <br>
+                    <a href='' id="withdraw">Withdraw</a>
+                </div>
+            </div>
+            
+            <br>
+            <div class="gray" id="refat"></div>
+        </div>
+        -->
+        <div class="center">
+            <br>
+            <a href="" id="refresh">Reload</a>
+        </div>
+    </body>
+    <script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js" async></script>
+    <script type="module" async>
+        import Utils from "./utils.js"
+
+        //
+        // Globals
+        //
+        let BEAM = undefined
+        let errTimeout = null
+        let restartTimeout = null
+        let contractId = undefined
+        let balance = 0
+
+        function setText(id, text) {
+            Utils.byId(id).innerText = text
+        }
+
+        function setStatus(text) {
+            setText('status', text)
+        }
+
+        function show(id) {
+            let obj = Utils.byId(id)
+            obj.classList.remove('invisible')
+        }
+
+        function hide(id) {
+            let obj = Utils.byId(id)
+            if (obj) obj.classList.add('invisible')
+        }
+
+        function setError(text) {
+            setText('error', text)
+            if (errTimeout) {
+                clearTimeout(errTimeout)   
+            }
+            errTimeout = setTimeout(() => setError(""), 3000)
+        }
+
+        function setBalance(val) {
+            balance = val
+            setText('balance', balance / 100000000)
+        }
+
+        function restart() {
+            if (restartTimeout) {
+                clearTimeout(restartTimeout)
+                restartTimeout = null
+            }
+
+            hide('vault')
+            setStatus('Reconnecting...')
+            restartTimeout = setTimeout (start, 3000)
+        }
+
+        Utils.byId('deposit').addEventListener('click', (ev) => {
+            Utils.callApi({
+                "jsonrpc": "2.0",
+                "id":      "user-deposit",
+                "method":  "invoke_contract",
+                "params":  {
+                    args: ["role=my_account,action=deposit,amount=500000000,asset=0,cid=", contractId].join('')
+                }
+            })
+            // TODO: disable button
+            // TODO: get and check txid
+            ev.preventDefault()
+            return false
+        })
+
+        Utils.byId('withdraw').addEventListener('click', (ev) => {
+            Utils.callApi({
+                "jsonrpc": "2.0",
+                "id":      "user-withdraw",
+                "method":  "invoke_contract",
+                "params":  {
+                    args: ["role=my_account,action=withdraw,amount=", balance, "asset=0,cid=", contractId].join('')
+                }
+            })
+            hide('withdraw')
+            ev.preventDefault()
+            return false
+        })
+
+        function start () {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                var errTemplate = "Failed to load shader,"
+
+                if(xhr.readyState === XMLHttpRequest.DONE)
+                {
+                    if (xhr.status === 200)
+                    {
+                        let buffer = xhr.response
+                        let byteArray = new Uint8Array(buffer);
+                        let array = Array.from(byteArray)
+
+                        if (!array || !array.length)
+                        {
+                            let errMsg = [errTemplate, "empty shader"].join(" ")
+                            setError(errMsg)
+                            restart(false)
+                            return
+                        }
+
+                        Utils.callApi({
+                            "jsonrpc": "2.0",
+                            "id":      "manager-view",
+                            "method":  "invoke_contract",
+                            "params":  {
+                                contract: array,
+                                args: "role=manager,action=view"
+                            }
+                        })
+                    }
+                    else
+                    {
+                        let errMsg = [errTemplate, "code", xhr.status].join(" ")
+                        setError(errMsg)
+                        restart(false)
+                    }
+                }
+            }
+            xhr.open('GET', "./vaultManager.wasm", true)
+            xhr.responseType = "arraybuffer";
+            xhr.send(null)
+        }
+
+        Utils.onLoad(async (beamAPI) => {
+            BEAM = beamAPI
+
+            //
+            // Make everything beautiful
+            //
+            let topColor = [BEAM.style.appsGradientOffset, "px,"].join('')
+            let mainColor = [BEAM.style.appsGradientTop, "px,"].join('')
+
+            document.body.style.backgroundImage = [
+                "linear-gradient(to bottom,",
+                BEAM.style.background_main_top, topColor, 
+                BEAM.style.background_main, mainColor,
+                BEAM.style.background_main
+            ].join(' ')
+
+            document.body.style.color = BEAM.style.content_main
+            Utils.byId('error').style.color = BEAM.style.validator_error
+
+            function parseShaderResult (apiResult) {
+                if (typeof (apiResult) == "boolean") {
+                    return apiResult
+                }
+
+                if (!apiResult.output) {
+                    throw "Empty shader response"
+                }
+
+                let shaderOut = JSON.parse(["{", apiResult.output, "}"].join(""))
+                if (shaderOut.error) {
+                    throw ["Shader error: ", shaderOut.error].join("")
+                }
+
+                return shaderOut
+            }
+
+            BEAM.callWalletApiResult.connect(json => {
+                let apiAnswer = undefined
+                let apiResult = undefined
+                let apiCallId = undefined
+                let shaderOut = undefined
+
+                try
+                {
+                    apiAnswer = JSON.parse(json)
+                    if (apiAnswer.error)
+                    {
+                        throw JSON.stringify(apiAnswer.error)
+                    }
+
+                    apiCallId = apiAnswer.id
+                    apiResult = apiAnswer.result
+                    if (!apiResult) {
+                        throw "Failed to call wallet API"
+                    }
+
+                    if (apiCallId == "manager-view")
+                    {
+                        let shaderOut = undefined
+
+                        shaderOut = parseShaderResult(apiResult)
+                        contractId = shaderOut.Cid
+
+                        if (contractId !== "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
+                            throw ["Failed to verify contract, cid is ", contractId].join('')
+                        }
+
+                        setText("cid", "Contract ID: " + contractId)
+                        setStatus("Loading balance...")
+
+                        Utils.callApi({
+                            "jsonrpc": "2.0",
+                            "id":      "user-view",
+                            "method":  "invoke_contract",
+                            "params":  {
+                                args: ["role=my_account,action=view,cid=", contractId].join("")
+                            }
+                        })
+                    }
+
+                    if (apiCallId == "user-view") {
+                        shaderOut = parseShaderResult(apiResult)
+
+                        if (typeof(shaderOut) == "boolean") {
+                            setBalance(0)
+                        } else {
+                            let entry = shaderOut.elem
+                            if (!entry || !entry.Account || entry.AssetID !== 0) {
+                                throw "Failed to get balance"
+                            }
+                            setBalance(entry.Amount)
+                        }
+
+                        setStatus("Connected")
+                        show ("vault")
+
+                        if (balance == 0) {
+                            hide('withdraw')
+                        } else {
+                            show('withdraw')
+                        }
+                    }
+                }
+                catch(err) 
+                {
+                    setError(err.toString())
+                    restart()
+                    return
+                }
+            })
+            // Let's go
+            start()
+        })
+    </script>
+</html>
+</body>
