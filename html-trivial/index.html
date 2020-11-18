@@ -113,7 +113,7 @@
                 throw "Empty shader response"
             }
 
-            let shaderOut = JSON.parse(["{", apiResult.output, "}"].join(""))
+            let shaderOut = JSON.parse(apiResult.output)
             if (shaderOut.error) {
                 throw ["Shader error: ", shaderOut.error].join("")
             }
@@ -165,28 +165,33 @@
                 if (apiCallId == "manager-view")
                 {
                     let shaderOut = parseShaderResult(apiResult)
-                    contractId = shaderOut.Cid
-
-                    if (contractId !== "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
-                        throw ["Failed to verify contract, cid is ", contractId].join('')
+                    if (shaderOut.Cids) {
+                        for (var idx = 0; idx < shaderOut.Cids.length; ++idx) {
+                            let cid = shaderOut.Cids[idx]
+                            if (cid == "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
+                                contractId = cid
+                                setStatus("Loading balance...")
+                                return refresh(true)
+                            }
+                        }
                     }
-
-                    setStatus("Loading balance...")
-                    return refresh(true)
+                    throw "Failed to verify contract id"
                 }
 
                 if (apiCallId == "user-view") {
-                    let shaderOut = parseShaderResult(apiResult)
-                    let entry = shaderOut.elem
+                    let errmsg = "Failed to get balance"
 
-                    if (!entry) {
-                        // this account is empty
+                    let shaderOut = parseShaderResult(apiResult)
+                    if (!shaderOut.accounts || shaderOut.accounts.length == 0)
+                    {
+                        // no account info, means we've never used contract before
                         balance = 0
-                    } else {
-                        if (!entry.Account || entry.AssetID !== 0) {
-                            throw "Failed to get balance"
+                    } else {                     
+                        let accinfo = shaderOut.accounts[0]
+                        if (!accinfo.Account || accinfo.AssetID !== 0) {
+                            throw errmsg
                         }
-                        balance = entry.Amount
+                        balance = accinfo.Amount
                     }
                     
                     Utils.callApi("tx-list", "tx_list", {})
