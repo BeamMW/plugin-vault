@@ -63,6 +63,7 @@
 
         function showVault() {
             setStatus("Connected")
+            Utils.setText('cid', contractId)
             Utils.setText('balance', balance / 100000000)
             Utils.show('vault')
 
@@ -197,21 +198,31 @@
                         throw ("Failed to get transactions list")
                     }
 
-                    inTransaction = false
-                    for(let idx = 0; idx < apiResult.length; ++idx) {
-                        let tx = apiResult[idx]
+                    let ourActiveTx = function (tx) {
                         if (tx["tx_type_string"] == "contract") {
-                            let status = tx["status"]
-                            if (status == 2 || status == 3 || status == 4) {
-                                // cancelled, completed, failed
-                                continue
+                            let ivdata = tx["invoke_data"]
+                            for (let idx = 0; idx < ivdata.length; ++idx) {
+                                if (ivdata[idx]["contract_id"] == contractId) {
+                                    let status = tx["status"]
+                                    if (status == 2 || status == 3 || status == 4) {
+                                        // cancelled, completed, failed
+                                        continue
+                                    }
+                                    return true
+                                }
                             }
-                            // other statuses are counted as active
+                        }
+                        return false
+                    }
+
+                    inTransaction = false
+                    for (let idx = 0; idx < apiResult.length; ++idx) {
+                        if (ourActiveTx(apiResult[idx])) {
                             inTransaction = true
                             break
                         }
                     }
-                    
+                        
                     return showVault()
                 }
 
