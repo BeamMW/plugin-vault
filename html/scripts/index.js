@@ -15,12 +15,10 @@ class Vault {
 
     setError = (errmsg) => {
         Utils.hide('vault');
-        Utils.setText('error', errmsg);
         if (this.timeout) {
             clearTimeout(this.timeout);   
         }
         this.timeout = setTimeout(() => {
-            Utils.setText('error', "")
             this.start();
         }, TIMEOUT)
     }
