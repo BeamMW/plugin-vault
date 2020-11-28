@@ -165,9 +165,9 @@
                 if (apiCallId == "manager-view")
                 {
                     let shaderOut = parseShaderResult(apiResult)
-                    if (shaderOut.Cids) {
-                        for (var idx = 0; idx < shaderOut.Cids.length; ++idx) {
-                            let cid = shaderOut.Cids[idx]
+                    if (shaderOut.contracts) {
+                        for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
+                            let cid = shaderOut.contracts[idx].cid
                             if (cid == "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
                                 contractId = cid
                                 setStatus("Loading balance...")
