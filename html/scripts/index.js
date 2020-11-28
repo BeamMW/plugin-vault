@@ -92,9 +92,9 @@ class Vault {
     
             if (apiCallId == "manager-view") {
                 const shaderOut = this.parseShaderResult(apiResult);
-                if (shaderOut.Cids) {
-                    for (var idx = 0; idx < shaderOut.Cids.length; ++idx) {
-                        const cid = shaderOut.Cids[idx];
+                if (shaderOut.contracts) {
+                    for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
+                        const cid = shaderOut.contracts[idx].cid
                         if (cid == "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
                             this.pluginData.contractId = cid;
                             return this.refresh(true);
