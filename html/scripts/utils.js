@@ -68,7 +68,7 @@ export default class Utils {
             "method":  method,
             "params":  params
         }
-        Utils.BEAM.callWalletApi(JSON.stringify(request))
+        Utils.api.BEAM.callWalletApi(JSON.stringify(request))
     }
 
     static download(url, cback) {

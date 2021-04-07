@@ -96,7 +96,7 @@ class Vault {
                 if (shaderOut.contracts) {
                     for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
                         const cid = shaderOut.contracts[idx].cid
-                        if (cid == "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
+                        if (cid == "e79978c2f38ccf5c71aa164d5014a5780f88c93a62414b06ba000f41a1eafd56") {
                             this.pluginData.contractId = cid;
                             return this.refresh(true);
                         }
