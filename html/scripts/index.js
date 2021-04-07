@@ -172,7 +172,7 @@ class Vault {
 Utils.onLoad(async (beamAPI) => {
     let vault = new Vault();
     //Utils.getById('error').style.color = beamAPI.style.validator_error;
-    beamAPI.callWalletApiResult.connect(vault.onApiResult);
+    beamAPI.api.callWalletApiResult.connect(vault.onApiResult);
 
     Utils.getById('deposit-button-popup').addEventListener('click', (ev) => {
         const bigValue = new Big(Utils.getById('deposit-input').value);
