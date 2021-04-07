@@ -135,6 +135,8 @@ body {
 
 #error {
     margin-top: 0.7em;
+    font-size: 14px;
+    color: red;
 }
 
 .ui-button {

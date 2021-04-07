@@ -43,7 +43,7 @@ class Vault {
             if (err) {
                 let errTemplate = "Failed to load shader,"
                 let errMsg = [errTemplate, err].join(" ")
-                return setError(errMsg)
+                return this.setError(errMsg)
             }
     
             Utils.callApi("manager-view", "invoke_contract", {
