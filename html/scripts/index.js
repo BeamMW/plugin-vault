@@ -2,6 +2,7 @@ import Utils from "./utils.js"
 
 const TIMEOUT = 3000;
 const GROTHS_IN_BEAM = 100000000;
+const REJECTED_CALL_ID = -32021;
 
 class Vault {
     constructor() {
@@ -18,6 +19,8 @@ class Vault {
         if (document.getElementById('vault').classList.contains('hidden')) {
             errorElementId = "error-full";
             Utils.show('error-full-container');
+        } else {
+            Utils.show('error-common');
         }
 
         Utils.setText(errorElementId, errmsg)
@@ -35,6 +38,7 @@ class Vault {
         const bigValue = new Big(this.pluginData.balance);
         Utils.setText('in-vault', parseFloat(bigValue.div(GROTHS_IN_BEAM)));
         Utils.hide('error-full-container');
+        Utils.hide('error-common');
         Utils.show('vault');
         Utils.show('deposit');
         this.pluginData.balance ? Utils.show('withdraw') : Utils.hide('withdraw');
@@ -94,6 +98,10 @@ class Vault {
             let errorMessage = "";
             const apiAnswer = JSON.parse(json);
             if (apiAnswer.error) {
+                if (apiAnswer.error.code == REJECTED_CALL_ID) {
+                    return;
+                }
+
                 this.setError(apiAnswer.error);
                 throw JSON.stringify(apiAnswer.error);
             }

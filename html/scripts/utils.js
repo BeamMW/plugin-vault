@@ -57,11 +57,13 @@ export default class Utils {
 
     static show(id) {
         let obj = this.getById(id)
+        obj.classList.remove("hidden");
         obj.style.display="flex";
     }
     
     static hide(id) {
-        let obj = this.getById(id)
+        let obj = this.getById(id);
+        obj.classList.add("hidden");
         obj.style.display="none";
     }
 
