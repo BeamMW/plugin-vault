@@ -14,24 +14,29 @@ class Vault {
     }
 
     setError = (errmsg) => {
-        Utils.setText('error', errmsg)
+        let errorElementId = "error-common";
+        if (document.getElementById('vault').classList.contains('hidden')) {
+            errorElementId = "error-full";
+            Utils.show('error-full-container');
+        }
+
+        Utils.setText(errorElementId, errmsg)
         if (this.timeout) {
             clearTimeout(this.timeout);   
         }
         this.timeout = setTimeout(() => {
-            Utils.setText('error', errmsg)
+            Utils.setText(errorElementId, errmsg)
             this.start();
         }, TIMEOUT)
     }
     
     showVault = () => {
-        Utils.setText('cid', this.pluginData.contractId)
+        Utils.setText('cid', "cid: " + this.pluginData.contractId)
         const bigValue = new Big(this.pluginData.balance);
         Utils.setText('in-vault', parseFloat(bigValue.div(GROTHS_IN_BEAM)));
+        Utils.hide('error-full-container');
         Utils.show('vault');
-    
         Utils.show('deposit');
-        this.pluginData.inTransaction ? Utils.hide('buttons') : Utils.show('buttons')
         this.pluginData.balance ? Utils.show('withdraw') : Utils.hide('withdraw');
         this.pluginData.inTransaction ? Utils.show('intx') : Utils.hide('intx');
     
@@ -39,7 +44,7 @@ class Vault {
     }
 
     start = () => {
-        Utils.download("./vaultManager.wasm", function(err, bytes) {
+        Utils.download("./vaultManager.wasm", (err, bytes) => {
             if (err) {
                 let errTemplate = "Failed to load shader,"
                 let errMsg = [errTemplate, err].join(" ")
@@ -48,6 +53,7 @@ class Vault {
     
             Utils.callApi("manager-view", "invoke_contract", {
                 contract: bytes,
+                create_tx: false,
                 args: "role=manager,action=view"
             })
         })
@@ -60,6 +66,7 @@ class Vault {
 
         this.timeout = setTimeout(() => {
             Utils.callApi("user-view", "invoke_contract", {
+                create_tx: false,
                 args: ["role=my_account,action=view,cid=", this.pluginData.contractId].join("")
             })
         }, now ? 0 : TIMEOUT);
@@ -67,12 +74,16 @@ class Vault {
     
     parseShaderResult = (apiResult) => {
         if (typeof(apiResult.output) != 'string') {
-            throw "Empty shader response"
+            const errorMessage = "Empty shader response";
+            this.setError(errorMessage);
+            throw errorMessage;
         }
     
         const shaderOut = JSON.parse(apiResult.output);
         if (shaderOut.error) {
-            throw ["Shader error: ", shaderOut.error].join("")
+            const errorMessage = ["Shader error: ", shaderOut.error].join("");
+            this.setError(errorMessage);
+            throw errorMessage
         }
     
         return shaderOut;
@@ -80,34 +91,40 @@ class Vault {
 
     onApiResult = (json) => {
         try {
+            let errorMessage = "";
             const apiAnswer = JSON.parse(json);
             if (apiAnswer.error) {
-                throw JSON.stringify(apiAnswer.error)
+                this.setError(apiAnswer.error);
+                throw JSON.stringify(apiAnswer.error);
             }
     
             const apiCallId = apiAnswer.id;
             const apiResult = apiAnswer.result;
             if (!apiResult) {
-                throw "Failed to call wallet API";
+                errorMessage = "Failed to call wallet API";
+                this.setError(errorMessage);
+                throw errorMessage;
             }
     
             if (apiCallId == "manager-view") {
+                errorMessage = "Failed to verify contract id";
                 const shaderOut = this.parseShaderResult(apiResult);
                 if (shaderOut.contracts) {
                     for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
                         const cid = shaderOut.contracts[idx].cid
-                        if (cid == "7965a18aefaf3050ccd404482eb919f6641daaf111c7c4a7787c2e932942aa91") {
+                        if (cid == "d9c5d1782b2d2b6f733486be480bb0d8bcf34d5fdc63bbac996ed76af541cc14") {
                             this.pluginData.contractId = cid;
                             return this.refresh(true);
                         }
                     }
                 }
     
-                throw "Failed to verify contract id"
+                this.setError(errorMessage);
+                throw errorMessage;
             }
     
             if (apiCallId == "user-view") {
-                const errmsg = "Failed to get balance"
+                errorMessage = "Failed to get balance"
                 const shaderOut = this.parseShaderResult(apiResult)
                 if (!shaderOut.accounts || shaderOut.accounts.length == 0)
                 {
@@ -116,7 +133,8 @@ class Vault {
                 } else {                     
                     const accinfo = shaderOut.accounts[0];
                     if (!accinfo.Account || accinfo.AssetID !== 0) {
-                        throw errmsg;
+                        this.setError(errorMessage);
+                        throw errorMessage;
                     }
                     this.pluginData.balance = accinfo.Amount;
                 }
@@ -127,7 +145,9 @@ class Vault {
     
             if (apiCallId == "tx-list") {
                 if (!Array.isArray(apiResult)) {
-                    throw ("Failed to get transactions list");
+                    errorMessage = "Failed to get transactions list";
+                    this.setError(errorMessage);
+                    throw (errorMessage);
                 }
     
                 let ourActiveTx = (tx) => {
@@ -158,9 +178,12 @@ class Vault {
                 return this.showVault();
             }
     
-            if (apiCallId == "user-deposit") {
+            if (apiCallId == "user-deposit" || apiCallId == "user-withdraw") {
+                Utils.callApi("process_invoke_data", "process_invoke_data", {
+                    data: apiResult.raw_data
+                });
                 return this.refresh(true);
-            } else if (apiCallId == "user-withdraw") {
+            }  else if (apiCallId == "process_invoke_data") {
                 return this.refresh(true);
             }
         } catch(err) {
@@ -171,20 +194,19 @@ class Vault {
 
 Utils.onLoad(async (beamAPI) => {
     let vault = new Vault();
-    //Utils.getById('error').style.color = beamAPI.style.validator_error;
-    beamAPI.callWalletApiResult.connect(vault.onApiResult);
+    beamAPI.api.callWalletApiResult.connect(vault.onApiResult);
 
     Utils.getById('deposit-button-popup').addEventListener('click', (ev) => {
         const bigValue = new Big(Utils.getById('deposit-input').value);
         const value = bigValue.times(GROTHS_IN_BEAM);
         Utils.callApi("user-deposit", "invoke_contract", {
-                args: `role=my_account,action=deposit,amount=${parseInt(value)},asset=0,cid=${vault.pluginData.contractId}`
+            create_tx: false,
+            args: `role=my_account,action=deposit,amount=${parseInt(value)},asset=0,cid=${vault.pluginData.contractId}`
         });
         
         Utils.hide('deposit');
         Utils.hide('withdraw');
         Utils.hide('deposit-popup');
-        // don't refresh here, need to wait until previous contract invoke completes
         ev.preventDefault();
         return false;
     })
@@ -199,12 +221,12 @@ Utils.onLoad(async (beamAPI) => {
 
     Utils.getById('withdraw-button-popup').addEventListener('click', (ev) => {
         Utils.callApi("user-withdraw", "invoke_contract", {
+            create_tx: false,
             args: `role=my_account,action=withdraw,amount=${vault.pluginData.balance},asset=0,cid=${vault.pluginData.contractId}`
         })
         Utils.hide('deposit');
         Utils.hide('withdraw');
         Utils.hide('withdraw-popup');
-        // don't refresh here, need to wait until previous contract invoke completes
         ev.preventDefault();
         return false;
     })

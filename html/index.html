@@ -8,7 +8,10 @@
         <link href="./css/fonts.css" rel="stylesheet">
     </head>
     <body>
-        <div id="error"></div>
+        <div class="error-container hidden" id="error-full-container">
+            <div id="error-full"></div>
+        </div>
+        <div id="error-common"></div>
         <div class="container hidden" id="vault">
             <div class="container__cards">
                 <div class="container__cards__top__vault card">
@@ -23,8 +26,7 @@
                 <div class="container__main__empty-deposit main-text">
                     <div>Welcome to Vault!</div>
                     <div id="intx">
-                        Vault transaction is in progress.<br>
-                        You would be able to deposit/withdraw after the transaction is completed.
+                        Vault transaction is in progress.
                     </div>
                 </div>
 

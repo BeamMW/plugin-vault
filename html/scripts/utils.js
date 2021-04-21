@@ -1,3 +1,6 @@
+const MIN_AMOUNT = 0.00000001;
+const MAX_AMOUNT = 254000000;
+
 export default class Utils {
     static reload () {
         window.location.reload()
@@ -31,7 +34,8 @@ export default class Utils {
             document.querySelectorAll('.popup__content').forEach(item => {
                 item.style.backgroundColor = Utils.hex2rgba(Utils.BEAM.style.background_popup, 1);
             });
-            document.getElementById('error').style.color = Utils.BEAM.style.validator_error;
+            document.getElementById('error-full').style.color = Utils.BEAM.style.validator_error;
+            document.getElementById('error-common').style.color = Utils.BEAM.style.validator_error;
 
             // Notify application
             cback(Utils.BEAM)
@@ -68,7 +72,7 @@ export default class Utils {
             "method":  method,
             "params":  params
         }
-        Utils.BEAM.callWalletApi(JSON.stringify(request))
+        Utils.BEAM.api.callWalletApi(JSON.stringify(request))
     }
 
     static download(url, cback) {
