@@ -3,6 +3,7 @@ import Utils from "./utils.js"
 const TIMEOUT = 3000;
 const GROTHS_IN_BEAM = 100000000;
 const REJECTED_CALL_ID = -32021;
+const IN_PROGRESS_ID = 5;
 
 class Vault {
     constructor() {
@@ -10,7 +11,8 @@ class Vault {
         this.pluginData = {
             contractId: undefined,
             balance: 0,
-            inTransaction: true,
+            inProgress: true,
+            isWithdraw: null
         };
     }
 
@@ -42,8 +44,9 @@ class Vault {
         Utils.show('vault');
         Utils.show('deposit');
         this.pluginData.balance ? Utils.show('withdraw') : Utils.hide('withdraw');
-        this.pluginData.inTransaction ? Utils.show('intx') : Utils.hide('intx');
-    
+        this.pluginData.inProgress ? Utils.show('intx') : Utils.hide('intx');
+        this.pluginData.isWithdraw ? Utils.hide('withdraw') : Utils.show('withdraw');
+
         this.refresh(false);
     }
 
@@ -157,32 +160,31 @@ class Vault {
                     this.setError(errorMessage);
                     throw (errorMessage);
                 }
-    
-                let ourActiveTx = (tx) => {
-                    if (tx["tx_type_string"] == "contract") {
-                        const ivdata = tx["invoke_data"];
-                        for (let idx = 0; idx < ivdata.length; ++idx) {
-                            if (ivdata[idx]["contract_id"] == this.pluginData.contractId) {
-                                const status = tx["status"]
-                                if (status == 2 || status == 3 || status == 4) {
-                                    // cancelled, completed, failed
-                                    continue
+
+                for (let element of apiResult) {
+                    if (element["tx_type_string"] == "contract") {
+                        const ivdata = element["invoke_data"];
+                        let isProgressDetected = false;
+                        for (let data of ivdata) {
+                            if (data["contract_id"] == this.pluginData.contractId) {
+                                const status = element["status"]
+                                if (status === IN_PROGRESS_ID) {
+                                    isProgressDetected = true;
+                                    break;
                                 }
-                                return true;
                             }
+                        };
+
+                        if (isProgressDetected) {
+                            this.pluginData.inProgress = true;
+                            this.pluginData.isWithdraw = element["comment"] === "withdraw from Vault"; 
+                            break;
+                        } else {
+                            this.pluginData.inProgress = false;
+                            this.pluginData.isWithdraw = null;
                         }
                     }
-                    return false;
-                }
-
-                this.pluginData.inTransaction = false;
-                for (let idx = 0; idx < apiResult.length; ++idx) {
-                    if (ourActiveTx(apiResult[idx])) {
-                        this.pluginData.inTransaction = true;
-                        break
-                    }
-                }
-                
+                };
                 return this.showVault();
             }
     
