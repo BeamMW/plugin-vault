@@ -36,16 +36,18 @@ class Vault {
     }
     
     showVault = () => {
-        Utils.setText('cid', "cid: " + this.pluginData.contractId)
-        const bigValue = new Big(this.pluginData.balance);
-        Utils.setText('in-vault', parseFloat(bigValue.div(GROTHS_IN_BEAM)));
+        Utils.setText('cid', "cid: " + this.pluginData.contractId);
+        Utils.setText('in-vault', parseFloat(new Big(this.pluginData.balance).div(GROTHS_IN_BEAM)));
+        Utils.show('vault');
         Utils.hide('error-full-container');
         Utils.hide('error-common');
-        Utils.show('vault');
         Utils.show('deposit');
-        this.pluginData.balance ? Utils.show('withdraw') : Utils.hide('withdraw');
         this.pluginData.inProgress ? Utils.show('intx') : Utils.hide('intx');
-        this.pluginData.isWithdraw ? Utils.hide('withdraw') : Utils.show('withdraw');
+        if (this.pluginData.inProgress && this.pluginData.isWithdraw) {
+            Utils.hide('withdraw')
+        } else if (!this.pluginData.inProgress || (this.pluginData.inProgress && !this.pluginData.isWithdraw)) {
+            this.pluginData.balance ? Utils.show('withdraw') : Utils.hide('withdraw');
+        }
 
         this.refresh(false);
     }
