@@ -83,16 +83,12 @@ class Vault {
     
     parseShaderResult = (apiResult) => {
         if (typeof(apiResult.output) != 'string') {
-            const errorMessage = "Empty shader response";
-            this.setError(errorMessage);
-            throw errorMessage;
+            throw "Empty shader response";
         }
     
         const shaderOut = JSON.parse(apiResult.output);
         if (shaderOut.error) {
-            const errorMessage = ["Shader error: ", shaderOut.error].join("");
-            this.setError(errorMessage);
-            throw errorMessage
+            throw ["Shader error: ", shaderOut.error].join("")
         }
     
         return shaderOut;
@@ -106,21 +102,16 @@ class Vault {
                 if (apiAnswer.error.code == REJECTED_CALL_ID) {
                     return;
                 }
-
-                this.setError(apiAnswer.error);
                 throw JSON.stringify(apiAnswer.error);
             }
     
             const apiCallId = apiAnswer.id;
             const apiResult = apiAnswer.result;
             if (!apiResult) {
-                errorMessage = "Failed to call wallet API";
-                this.setError(errorMessage);
-                throw errorMessage;
+                throw "Failed to call wallet API";
             }
     
             if (apiCallId == "manager-view") {
-                errorMessage = "Failed to verify contract id";
                 const shaderOut = this.parseShaderResult(apiResult);
                 if (shaderOut.contracts) {
                     for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
@@ -131,13 +122,10 @@ class Vault {
                         }
                     }
                 }
-    
-                this.setError(errorMessage);
-                throw errorMessage;
+                throw "Failed to verify contract id";
             }
     
             if (apiCallId == "user-view") {
-                errorMessage = "Failed to get balance"
                 const shaderOut = this.parseShaderResult(apiResult)
                 if (!shaderOut.accounts || shaderOut.accounts.length == 0)
                 {
@@ -146,8 +134,7 @@ class Vault {
                 } else {                     
                     const accinfo = shaderOut.accounts[0];
                     if (!accinfo.Account || accinfo.AssetID !== 0) {
-                        this.setError(errorMessage);
-                        throw errorMessage;
+                        throw "Failed to get balance";
                     }
                     this.pluginData.balance = accinfo.Amount;
                 }
@@ -158,9 +145,7 @@ class Vault {
     
             if (apiCallId == "tx-list") {
                 if (!Array.isArray(apiResult)) {
-                    errorMessage = "Failed to get transactions list";
-                    this.setError(errorMessage);
-                    throw (errorMessage);
+                    throw "Failed to get transactions list";
                 }
 
                 for (let element of apiResult) {
