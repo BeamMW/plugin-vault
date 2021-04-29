@@ -133,9 +133,20 @@ body {
 
 /* common elements start */
 
-#error {
-    margin-top: 0.7em;
-    font-size: 14px;
+.error-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+#error-full,
+#error-common {
+    text-align: center;
+    font-size: 16px;
     color: red;
 }
 
