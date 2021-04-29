@@ -4,6 +4,7 @@ const TIMEOUT = 3000;
 const GROTHS_IN_BEAM = 100000000;
 const REJECTED_CALL_ID = -32021;
 const IN_PROGRESS_ID = 5;
+const CONTRACT_ID = "d9c5d1782b2d2b6f733486be480bb0d8bcf34d5fdc63bbac996ed76af541cc14";
 
 class Vault {
     constructor() {
@@ -36,7 +37,7 @@ class Vault {
     }
     
     showVault = () => {
-        Utils.setText('cid', "cid: " + this.pluginData.contractId);
+        Utils.setText('cid', "Contract ID: " + this.pluginData.contractId);
         Utils.setText('in-vault', parseFloat(new Big(this.pluginData.balance).div(GROTHS_IN_BEAM)));
         Utils.show('vault');
         Utils.hide('error-full-container');
@@ -96,7 +97,6 @@ class Vault {
 
     onApiResult = (json) => {
         try {
-            let errorMessage = "";
             const apiAnswer = JSON.parse(json);
             if (apiAnswer.error) {
                 if (apiAnswer.error.code == REJECTED_CALL_ID) {
@@ -116,7 +116,7 @@ class Vault {
                 if (shaderOut.contracts) {
                     for (var idx = 0; idx < shaderOut.contracts.length; ++idx) {
                         const cid = shaderOut.contracts[idx].cid
-                        if (cid == "d9c5d1782b2d2b6f733486be480bb0d8bcf34d5fdc63bbac996ed76af541cc14") {
+                        if (cid == CONTRACT_ID) {
                             this.pluginData.contractId = cid;
                             return this.refresh(true);
                         }
@@ -176,6 +176,10 @@ class Vault {
             }
     
             if (apiCallId == "user-deposit" || apiCallId == "user-withdraw") {
+                if (apiResult.raw_data === undefined || apiResult.raw_data.length < 1) {
+                    throw 'Failed to load raw data';
+                }
+
                 Utils.callApi("process_invoke_data", "process_invoke_data", {
                     data: apiResult.raw_data
                 });
