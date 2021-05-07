@@ -12,7 +12,7 @@ class Vault {
         this.pluginData = {
             contractId: undefined,
             balance: 0,
-            inProgress: true,
+            inProgress: false,
             isWithdraw: null
         };
     }
@@ -147,6 +147,9 @@ class Vault {
                 if (!Array.isArray(apiResult)) {
                     throw "Failed to get transactions list";
                 }
+                
+                this.pluginData.inProgress = false;
+                this.pluginData.isWithdraw = null;
 
                 for (let element of apiResult) {
                     if (element["tx_type_string"] == "contract") {
@@ -166,9 +169,6 @@ class Vault {
                             this.pluginData.inProgress = true;
                             this.pluginData.isWithdraw = element["comment"] === "withdraw from Vault"; 
                             break;
-                        } else {
-                            this.pluginData.inProgress = false;
-                            this.pluginData.isWithdraw = null;
                         }
                     }
                 };
