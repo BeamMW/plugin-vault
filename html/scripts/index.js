@@ -12,7 +12,7 @@ class Vault {
         this.pluginData = {
             contractId: undefined,
             balance: 0,
-            inProgress: true,
+            inProgress: false,
             isWithdraw: null
         };
     }
