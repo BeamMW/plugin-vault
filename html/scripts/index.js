@@ -148,8 +148,8 @@ class Vault {
                     throw "Failed to get transactions list";
                 }
 
-                this.pluginData.inProgress = true;
-                this.pluginData.isWithdraw = false;
+                this.pluginData.inProgress = false;
+                this.pluginData.isWithdraw = null;
 
                 for (let element of apiResult) {
                     if (element["tx_type_string"] == "contract") {
